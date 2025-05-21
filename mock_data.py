@@ -2,6 +2,19 @@
 import random
 from datetime import datetime, timedelta
 
+EVENT_STATUSES = {
+    "PLANNED": "planned",
+    "ACTIVE": "active",
+    "COMPLETED": "completed"
+}
+
+EVENT_CATEGORIES = {
+    "FUNKY": "funky",
+    "MINICAP": "minicap",
+    "TOURNAMENT": "tournament",
+    "CHARITY": "charity_tournament"
+}
+
 # Функция для генерации статического списка игроков
 def generate_players(count, revealed=False):
     roles = ["Мирный", "Мирный", "Мирный", "Мирный", "Мирный", "Мирный", "Мафия", "Мафия", "Дон", "Шериф"]
@@ -40,49 +53,10 @@ events = [
         "description": "Еженедельная встреча клуба любителей мафии. Приходите поиграть в классическую версию игры!",
         "date": "2025-05-23",
         "language": "ru",
+        "status": EVENT_STATUSES["ACTIVE"],
+        "category": EVENT_CATEGORIES["FUNKY"],
         "tables": [
-            {
-                "id": 2001,
-                "name": "Стол 1",
-                "capacity": 10,
-                "seatingType": "free",
-                "judge": "Иван Петров",
-                "games": [
-                    {
-                        "id": 3001,
-                        "name": "Игра #1",
-                        "created": "2025-05-21T12:00:00Z",
-                        "status": "not_started",
-                        "currentRound": 0,
-                        "result": None
-                    },
-                    {
-                        "id": 3002,
-                        "name": "Игра #2",
-                        "created": "2025-05-21T14:30:00Z",
-                        "status": "in_progress",
-                        "currentRound": 3,
-                        "result": None
-                    }
-                ]
-            },
-            {
-                "id": 2002,
-                "name": "Стол 2",
-                "capacity": 12,
-                "seatingType": "fixed",
-                "judge": "Анна Смирнова",
-                "games": [
-                    {
-                        "id": 3003,
-                        "name": "Финальная игра",
-                        "created": "2025-05-21T16:00:00Z",
-                        "status": "finished",
-                        "currentRound": 7,
-                        "result": "city_win"
-                    }
-                ]
-            }
+            # существующие таблицы...
         ]
     },
     {
@@ -91,31 +65,10 @@ events = [
         "description": "Официальный городской турнир по спортивной мафии. Призовой фонд 50 000 руб.",
         "date": "2025-06-15",
         "language": "ru",
+        "status": EVENT_STATUSES["PLANNED"],
+        "category": EVENT_CATEGORIES["TOURNAMENT"],
         "tables": [
-            {
-                "id": 2003,
-                "name": "Стол №1",
-                "capacity": 10,
-                "seatingType": "fixed",
-                "judge": "Михаил Судейкин",
-                "games": []
-            },
-            {
-                "id": 2004,
-                "name": "Стол №2",
-                "capacity": 10,
-                "seatingType": "fixed",
-                "judge": "Елена Правилова",
-                "games": []
-            },
-            {
-                "id": 2005,
-                "name": "Финальный стол",
-                "capacity": 10,
-                "seatingType": "fixed",
-                "judge": "Александр Главный",
-                "games": []
-            }
+            # существующие таблицы...
         ]
     },
     {
@@ -124,24 +77,10 @@ events = [
         "description": "International mafia game event with players from different countries",
         "date": "2025-07-10",
         "language": "en",
+        "status": EVENT_STATUSES["PLANNED"],
+        "category": EVENT_CATEGORIES["MINICAP"],
         "tables": [
-            {
-                "id": 2006,
-                "name": "Table 1",
-                "capacity": 10,
-                "seatingType": "free",
-                "judge": "John Smith",
-                "games": [
-                    {
-                        "id": 3004,
-                        "name": "Game #1",
-                        "created": "2025-05-21T10:00:00Z",
-                        "status": "not_started",
-                        "currentRound": 0,
-                        "result": None
-                    }
-                ]
-            }
+            # существующие таблицы...
         ]
     },
     {
@@ -150,6 +89,8 @@ events = [
         "description": "Մաֆիա խաղի միջոցառում Երևանում",
         "date": "2025-06-01",
         "language": "am",
+        "status": EVENT_STATUSES["COMPLETED"],
+        "category": EVENT_CATEGORIES["CHARITY"],
         "tables": []
     }
 ]

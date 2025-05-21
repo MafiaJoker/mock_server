@@ -6,6 +6,7 @@ import uvicorn
 import json
 from datetime import datetime
 from pydantic import BaseModel
+from enum import Enum
 import mock_data
 
 app = FastAPI(title="Mafia Game Helper API", description="Заглушка API для приложения Mafia Game Helper")
@@ -24,6 +25,18 @@ events = mock_data.events
 game_states = mock_data.game_states
 judges = mock_data.judges
 
+# Добавим классы для перечислений
+class EventStatus(str, Enum):
+    PLANNED = "planned"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+
+class EventCategory(str, Enum):
+    FUNKY = "funky"
+    MINICAP = "minicap"
+    TOURNAMENT = "tournament"
+    CHARITY = "charity_tournament"
+    
 @app.get("/")
 def read_root():
     return {"message": "Mafia Game Helper API - Заглушка работает!"}
@@ -44,6 +57,21 @@ def get_event(event_id: int):
 # Создать новое мероприятие
 @app.post("/api/events", status_code=201)
 def create_event(event_data: Dict[str, Any]):
+    # Проверка категории и статуса, если они предоставлены
+    if "category" in event_data and event_data["category"] not in [cat.value for cat in EventCategory]:
+        raise HTTPException(status_code=400, detail=f"Неверная категория. Допустимые значения: {[cat.value for cat in EventCategory]}")
+    
+    if "status" in event_data and event_data["status"] not in [status.value for status in EventStatus]:
+        raise HTTPException(status_code=400, detail=f"Неверный статус. Допустимые значения: {[status.value for status in EventStatus]}")
+    
+    # Если статус не указан, устанавливаем его как "created"
+    if "status" not in event_data:
+        event_data["status"] = EventStatus.CREATED.value
+        
+    # Если категория не указана, устанавливаем её как "funky" по умолчанию
+    if "category" not in event_data:
+        event_data["category"] = EventCategory.FUNKY.value
+        
     new_event = {
         "id": int(datetime.now().timestamp() * 1000),
         **event_data,
@@ -98,6 +126,10 @@ def create_table(event_id: int, table_data: Dict[str, Any]):
     event_index = next((i for i, e in enumerate(events) if e["id"] == event_id), -1)
     if event_index == -1:
         raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+    
+    # Проверка статуса мероприятия
+    if events[event_index]["status"] == EventStatus.COMPLETED.value:
+        raise HTTPException(status_code=403, detail="Невозможно добавить стол к завершенному мероприятию")
     
     new_table = {
         "id": int(datetime.now().timestamp() * 1000),
@@ -172,6 +204,10 @@ def create_game(event_id: int, table_id: int, game_data: Dict[str, Any]):
     event_index = next((i for i, e in enumerate(events) if e["id"] == event_id), -1)
     if event_index == -1:
         raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+
+    # Проверка статуса мероприятия
+    if events[event_index]["status"] == EventStatus.COMPLETED.value:
+        raise HTTPException(status_code=403, detail="Невозможно добавить игру к завершенному мероприятию")
     
     table_index = next((i for i, t in enumerate(events[event_index].get("tables", [])) 
                         if t["id"] == table_id), -1)
