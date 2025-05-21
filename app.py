@@ -248,5 +248,17 @@ def update_game_state(game_id: int, state_data: Dict[str, Any]):
     
     return game_states[game_state_index]
 
+# Удалить мероприятие
+@app.delete("/api/events/{event_id}")
+def delete_event(event_id: int):
+    event_index = next((i for i, e in enumerate(events) if e["id"] == event_id), -1)
+    if event_index == -1:
+        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+    
+    # Удаляем мероприятие из списка
+    deleted_event = events.pop(event_index)
+    
+    return {"detail": "Мероприятие успешно удалено", "deleted": deleted_event["id"]}
+
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=3000, reload=True)
