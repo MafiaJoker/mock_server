@@ -1,3 +1,7 @@
 fastapi==0.104.1
 pydantic==2.4.2
 uvicorn==0.23.2
+# Зависимости для тестирования
+pytest==7.4.0
+httpx==0.25.0
+pytest-cov==4.1.0
