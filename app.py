@@ -297,6 +297,22 @@ def delete_event(event_id: int):
     
     return {"detail": "Мероприятие успешно удалено", "deleted": deleted_event["id"]}
 
+@app.delete("/api/events/{event_id}/tables/{table_id}")
+def delete_table(event_id: int, table_id: int):
+    event_index = next((i for i, e in enumerate(events) if e["id"] == event_id), -1)
+    if event_index == -1:
+        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+    
+    tables = events[event_index].get("tables", [])
+    table_index = next((i for i, t in enumerate(tables) if t["id"] == table_id), -1)
+    if table_index == -1:
+        raise HTTPException(status_code=404, detail="Стол не найден")
+    
+    # Удаляем стол
+    deleted_table = tables.pop(table_index)
+    
+    return {"detail": "Стол успешно удален", "deleted": deleted_table["id"]}
+
 # Получить список ведущих
 @app.get("/api/judges")
 def get_judges():
