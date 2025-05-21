@@ -5,57 +5,26 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:  # Позволяет запускать workflow вручную
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.8', '3.10']  # Тестирование на разных версиях Python
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
     
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Cache pip packages
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+        python-version: '3.10'
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov httpx
+        pip install pytest httpx
     
     - name: Run tests
       run: |
         pytest test_app.py test_mock_data.py -v
-    
-    - name: Generate coverage report
-      run: |
-        pytest --cov=app --cov=mock_data --cov-report=xml
-    
-    - name: Upload coverage report
-      uses: codecov/codecov-action@v1
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
-    
-    - name: Archive test results
-      if: always()
-      uses: actions/upload-artifact@v2   # Изменено с v3 на v2
-      with:
-        name: test-results-${{ matrix.python-version }}
-        path: |
-          ./coverage.xml
-          ./.pytest_cache
