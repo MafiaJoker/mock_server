@@ -326,5 +326,26 @@ def get_judge(judge_id: int):
         raise HTTPException(status_code=404, detail="Ведущий не найден")
     return judge
 
+@app.delete("/api/events/{event_id}/tables/{table_id}/games/{game_id}")
+def delete_game(event_id: int, table_id: int, game_id: int):
+    event_index = next((i for i, e in enumerate(events) if e["id"] == event_id), -1)
+    if event_index == -1:
+        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+    
+    table_index = next((i for i, t in enumerate(events[event_index].get("tables", [])) 
+                       if t["id"] == table_id), -1)
+    if table_index == -1:
+        raise HTTPException(status_code=404, detail="Стол не найден")
+    
+    games = events[event_index]["tables"][table_index].get("games", [])
+    game_index = next((i for i, g in enumerate(games) if g["id"] == game_id), -1)
+    if game_index == -1:
+        raise HTTPException(status_code=404, detail="Игра не найдена")
+    
+    # Удаляем игру
+    deleted_game = games.pop(game_index)
+    
+    return {"detail": "Игра успешно удалена", "deleted": deleted_game["id"]}
+
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=3000, reload=True)
