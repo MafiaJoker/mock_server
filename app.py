@@ -22,6 +22,7 @@ app.add_middleware(
 # Загружаем тестовые данные
 events = mock_data.events
 game_states = mock_data.game_states
+judges = mock_data.judges
 
 @app.get("/")
 def read_root():
@@ -259,6 +260,19 @@ def delete_event(event_id: int):
     deleted_event = events.pop(event_index)
     
     return {"detail": "Мероприятие успешно удалено", "deleted": deleted_event["id"]}
+
+# Получить список ведущих
+@app.get("/api/judges")
+def get_judges():
+    return judges
+
+# Получить ведущего по ID
+@app.get("/api/judges/{judge_id}")
+def get_judge(judge_id: int):
+    judge = next((j for j in judges if j["id"] == judge_id), None)
+    if not judge:
+        raise HTTPException(status_code=404, detail="Ведущий не найден")
+    return judge
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=3000, reload=True)
