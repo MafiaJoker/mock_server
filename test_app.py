@@ -241,3 +241,74 @@ def test_validation_game_result():
         response = client.put(f"/api/events/{event_id}/tables/{table_id}/games/{game_id}", json=updated_data)
         assert response.status_code == 200
         assert response.json()["result"] == result
+
+# test_app.py (добавляем новые тесты)
+
+def test_update_game_with_new_status():
+    event_id = mock_data.events[0]["id"]
+    table_id = mock_data.events[0]["tables"][0]["id"]
+    game_id = mock_data.events[0]["tables"][0]["games"][0]["id"]
+    
+    updated_data = {
+        "gameStatus": "in_progress",
+        "gameSubstatus": "discussion",
+        "isCriticalRound": False,
+        "currentRound": 2
+    }
+    
+    response = client.put(f"/api/events/{event_id}/tables/{table_id}/games/{game_id}", json=updated_data)
+    assert response.status_code == 200
+    assert response.json()["gameStatus"] == "in_progress"
+    assert response.json()["gameSubstatus"] == "discussion"
+    assert response.json()["isCriticalRound"] == False
+
+def test_get_game_scores():
+    game_id = mock_data.game_states[0]["gameId"]
+    response = client.get(f"/api/games/{game_id}/scores")
+    assert response.status_code == 200
+    assert "scores" in response.json() or isinstance(response.json(), dict)
+
+def test_update_game_scores():
+    game_id = mock_data.game_states[0]["gameId"]
+    new_scores = {
+        "1": {"baseScore": 1.0, "additionalScore": 0.5},
+        "2": {"baseScore": 0.0, "additionalScore": -0.5}
+    }
+    
+    response = client.put(f"/api/games/{game_id}/scores", json=new_scores)
+    assert response.status_code == 200
+    assert "scores" in response.json()
+
+def test_get_game_statistics():
+    game_id = mock_data.game_states[0]["gameId"]
+    response = client.get(f"/api/games/{game_id}/statistics")
+    assert response.status_code == 200
+    
+    stats = response.json()
+    assert "gameId" in stats
+    assert "round" in stats
+    assert "gameStatus" in stats
+    assert "roleStatistics" in stats
+    assert "playersAlive" in stats
+
+def test_game_state_with_new_fields():
+    game_id = 9999
+    new_state = {
+        "round": 1,
+        "phase": "day",
+        "gameStatus": "in_progress",
+        "gameSubstatus": "discussion",
+        "isCriticalRound": False,
+        "scores": {
+            "1": {"baseScore": 0, "additionalScore": 0},
+            "2": {"baseScore": 0, "additionalScore": 0}
+        },
+        "isGameStarted": True,
+        "players": mock_data.generate_players(10)
+    }
+    
+    response = client.put(f"/api/games/{game_id}/state", json=new_state)
+    assert response.status_code == 200
+    assert response.json()["gameStatus"] == "in_progress"
+    assert response.json()["gameSubstatus"] == "discussion"
+    assert "scores" in response.json()

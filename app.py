@@ -14,7 +14,7 @@ app = FastAPI(title="Mafia Game Helper API", description="Заглушка API �
 # Настройка CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В продакшене лучше указать конкретные домены
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,7 +25,7 @@ events = mock_data.events
 game_states = mock_data.game_states
 judges = mock_data.judges
 
-# Добавим классы для перечислений
+# Добавим новые классы для перечислений
 class EventStatus(str, Enum):
     PLANNED = "planned"
     ACTIVE = "active"
@@ -36,7 +36,51 @@ class EventCategory(str, Enum):
     MINICAP = "minicap"
     TOURNAMENT = "tournament"
     CHARITY = "charity_tournament"
-    
+
+# Новые перечисления для игр
+class GameStatus(str, Enum):
+    CREATED = "created"
+    SEATING_READY = "seating_ready"
+    ROLE_DISTRIBUTION = "role_distribution"
+    IN_PROGRESS = "in_progress"
+    FINISHED_NO_SCORES = "finished_no_scores"
+    FINISHED_WITH_SCORES = "finished_with_scores"
+
+class GameSubstatus(str, Enum):
+    DISCUSSION = "discussion"
+    CRITICAL_DISCUSSION = "critical_discussion"
+    VOTING = "voting"
+    SUSPECTS_SPEECH = "suspects_speech"
+    FAREWELL_MINUTE = "farewell_minute"
+    NIGHT = "night"
+
+# Модели данных для валидации
+class PlayerScore(BaseModel):
+    baseScore: float = 0.0
+    additionalScore: float = 0.0
+
+class GameStateUpdate(BaseModel):
+    round: Optional[int] = None
+    phase: Optional[str] = None
+    gameStatus: Optional[GameStatus] = None
+    gameSubstatus: Optional[GameSubstatus] = None
+    isCriticalRound: Optional[bool] = None
+    scores: Optional[Dict[str, PlayerScore]] = None
+    isGameStarted: Optional[bool] = None
+    players: Optional[List[Dict]] = None
+    deadPlayers: Optional[List[int]] = None
+    eliminatedPlayers: Optional[List[int]] = None
+    # ... остальные поля при необходимости
+
+class GameUpdate(BaseModel):
+    name: Optional[str] = None
+    status: Optional[str] = None
+    currentRound: Optional[int] = None
+    result: Optional[str] = None
+    gameStatus: Optional[GameStatus] = None
+    gameSubstatus: Optional[GameSubstatus] = None
+    isCriticalRound: Optional[bool] = None
+
 @app.get("/")
 def read_root():
     return {"message": "Mafia Game Helper API - Заглушка работает!"}
@@ -57,18 +101,15 @@ def get_event(event_id: int):
 # Создать новое мероприятие
 @app.post("/api/events", status_code=201)
 def create_event(event_data: Dict[str, Any]):
-    # Проверка категории и статуса, если они предоставлены
     if "category" in event_data and event_data["category"] not in [cat.value for cat in EventCategory]:
         raise HTTPException(status_code=400, detail=f"Неверная категория. Допустимые значения: {[cat.value for cat in EventCategory]}")
     
     if "status" in event_data and event_data["status"] not in [status.value for status in EventStatus]:
         raise HTTPException(status_code=400, detail=f"Неверный статус. Допустимые значения: {[status.value for status in EventStatus]}")
     
-    # Если статус не указан, устанавливаем его как "created"
     if "status" not in event_data:
-        event_data["status"] = EventStatus.CREATED.value
+        event_data["status"] = EventStatus.PLANNED.value
         
-    # Если категория не указана, устанавливаем её как "funky" по умолчанию
     if "category" not in event_data:
         event_data["category"] = EventCategory.FUNKY.value
         
@@ -87,13 +128,11 @@ def update_event(event_id: int, event_data: Dict[str, Any]):
     if event_index == -1:
         raise HTTPException(status_code=404, detail="Мероприятие не найдено")
     
-    # Обновляем данные, сохраняя ID и таблицы
     events[event_index].update({
         **event_data,
         "id": event_id
     })
     
-    # Если таблицы не были переданы, сохраняем существующие
     if "tables" not in event_data:
         events[event_index]["tables"] = events[event_index].get("tables", [])
         
@@ -127,7 +166,6 @@ def create_table(event_id: int, table_data: Dict[str, Any]):
     if event_index == -1:
         raise HTTPException(status_code=404, detail="Мероприятие не найдено")
     
-    # Проверка статуса мероприятия
     if events[event_index]["status"] == EventStatus.COMPLETED.value:
         raise HTTPException(status_code=403, detail="Невозможно добавить стол к завершенному мероприятию")
     
@@ -155,13 +193,11 @@ def update_table(event_id: int, table_id: int, table_data: Dict[str, Any]):
     if table_index == -1:
         raise HTTPException(status_code=404, detail="Стол не найден")
     
-    # Обновляем данные, сохраняя ID и игры
     events[event_index]["tables"][table_index].update({
         **table_data,
         "id": table_id
     })
     
-    # Если игры не были переданы, сохраняем существующие
     if "games" not in table_data:
         games = events[event_index]["tables"][table_index].get("games", [])
         events[event_index]["tables"][table_index]["games"] = games
@@ -205,7 +241,6 @@ def create_game(event_id: int, table_id: int, game_data: Dict[str, Any]):
     if event_index == -1:
         raise HTTPException(status_code=404, detail="Мероприятие не найдено")
 
-    # Проверка статуса мероприятия
     if events[event_index]["status"] == EventStatus.COMPLETED.value:
         raise HTTPException(status_code=403, detail="Невозможно добавить игру к завершенному мероприятию")
     
@@ -220,6 +255,10 @@ def create_game(event_id: int, table_id: int, game_data: Dict[str, Any]):
         "status": "not_started",
         "currentRound": 0,
         "result": None,
+        # Новые поля по умолчанию
+        "gameStatus": GameStatus.CREATED.value,
+        "gameSubstatus": None,
+        "isCriticalRound": False,
         **game_data
     }
     
@@ -231,7 +270,7 @@ def create_game(event_id: int, table_id: int, game_data: Dict[str, Any]):
 
 # Обновить игру
 @app.put("/api/events/{event_id}/tables/{table_id}/games/{game_id}")
-def update_game(event_id: int, table_id: int, game_id: int, game_data: Dict[str, Any]):
+def update_game(event_id: int, table_id: int, game_id: int, game_data: GameUpdate):
     event_index = next((i for i, e in enumerate(events) if e["id"] == event_id), -1)
     if event_index == -1:
         raise HTTPException(status_code=404, detail="Мероприятие не найдено")
@@ -246,9 +285,11 @@ def update_game(event_id: int, table_id: int, game_id: int, game_data: Dict[str,
     if game_index == -1:
         raise HTTPException(status_code=404, detail="Игра не найдена")
     
-    # Обновляем данные, сохраняя ID
+    # Преобразуем Pydantic модель в словарь, исключая None значения
+    update_data = game_data.dict(exclude_unset=True)
+    
     events[event_index]["tables"][table_index]["games"][game_index].update({
-        **game_data,
+        **update_data,
         "id": game_id
     })
     
@@ -259,7 +300,7 @@ def update_game(event_id: int, table_id: int, game_id: int, game_data: Dict[str,
 def get_game_state(game_id: int):
     game_state = next((gs for gs in game_states if gs["gameId"] == game_id), None)
     if not game_state:
-        # Если состояние игры не найдено, возвращаем начальное состояние
+        # Возвращаем дефолтное состояние с новыми полями
         return mock_data.default_game_state
     return game_state
 
@@ -272,16 +313,19 @@ def update_game_state(game_id: int, state_data: Dict[str, Any]):
     game_state_index = next((i for i, gs in enumerate(game_states) if gs["gameId"] == game_id), -1)
     
     if game_state_index == -1:
-        # Если состояние игры не найдено, создаем новое
         print(f"Создание нового состояния для игры {game_id}")
         new_game_state = {
             "gameId": game_id,
+            # Устанавливаем значения по умолчанию для новых полей
+            "gameStatus": mock_data.GAME_STATUSES["CREATED"],
+            "gameSubstatus": None,
+            "isCriticalRound": False,
+            "scores": {str(i): {"baseScore": 0, "additionalScore": 0} for i in range(1, 11)},
             **state_data
         }
         game_states.append(new_game_state)
         game_state = new_game_state
     else:
-        # Обновляем существующее состояние
         print(f"Обновление существующего состояния для игры {game_id}")
         game_states[game_state_index].update({
             **state_data,
@@ -289,11 +333,8 @@ def update_game_state(game_id: int, state_data: Dict[str, Any]):
         })
         game_state = game_states[game_state_index]
         
-    # ВАЖНО: Синхронизируем статус игры в основной структуре событий
-    if "isGameStarted" in state_data:
-        print(f"Синхронизация статуса игры. isGameStarted: {state_data['isGameStarted']}")
-        
-        # Ищем игру в структуре событий
+    # Синхронизируем статус игры в основной структуре событий
+    if "isGameStarted" in state_data or "gameStatus" in state_data:
         game_found = False
         for event in events:
             for table in event.get("tables", []):
@@ -302,12 +343,30 @@ def update_game_state(game_id: int, state_data: Dict[str, Any]):
                         print(f"Найдена игра в событии {event['id']}, столе {table['id']}")
                         old_status = game.get("status", "not_started")
                         
-                        # Обновляем статус игры
-                        if state_data["isGameStarted"]:
-                            game["status"] = "in_progress"
-                            if "round" in state_data:
-                                game["currentRound"] = state_data["round"]
-                                
+                        # Обновляем статус игры на основе gameStatus
+                        if "gameStatus" in state_data:
+                            game_status = state_data["gameStatus"]
+                            if game_status == mock_data.GAME_STATUSES["IN_PROGRESS"]:
+                                game["status"] = "in_progress"
+                            elif game_status in [
+                                mock_data.GAME_STATUSES["FINISHED_NO_SCORES"],
+                                mock_data.GAME_STATUSES["FINISHED_WITH_SCORES"]
+                            ]:
+                                game["status"] = "finished"
+                            else:
+                                game["status"] = "not_started"
+                        
+                        # Обновляем gameStatus и gameSubstatus в игре
+                        if "gameStatus" in state_data:
+                            game["gameStatus"] = state_data["gameStatus"]
+                        if "gameSubstatus" in state_data:
+                            game["gameSubstatus"] = state_data["gameSubstatus"]
+                        if "isCriticalRound" in state_data:
+                            game["isCriticalRound"] = state_data["isCriticalRound"]
+                        
+                        if "round" in state_data:
+                            game["currentRound"] = state_data["round"]
+                            
                         print(f"Статус игры изменен с '{old_status}' на '{game['status']}'")
                         game_found = True
                         break
@@ -322,6 +381,81 @@ def update_game_state(game_id: int, state_data: Dict[str, Any]):
     print(f"Итоговое состояние игры: {game_state}")
     return game_state
 
+# НОВЫЕ ЭНДПОИНТЫ ДЛЯ РАБОТЫ С БАЛЛАМИ
+
+# Получить баллы игроков для игры
+@app.get("/api/games/{game_id}/scores")
+def get_game_scores(game_id: int):
+    game_state = next((gs for gs in game_states if gs["gameId"] == game_id), None)
+    if not game_state:
+        raise HTTPException(status_code=404, detail="Состояние игры не найдено")
+    
+    return game_state.get("scores", {})
+
+# Обновить баллы игроков
+@app.put("/api/games/{game_id}/scores")
+def update_game_scores(game_id: int, scores: Dict[str, PlayerScore]):
+    game_state_index = next((i for i, gs in enumerate(game_states) if gs["gameId"] == game_id), -1)
+    if game_state_index == -1:
+        raise HTTPException(status_code=404, detail="Состояние игры не найдено")
+    
+    # Преобразуем Pydantic модели в словари
+    scores_dict = {}
+    for player_id, score in scores.items():
+        scores_dict[player_id] = score.dict()
+    
+    game_states[game_state_index]["scores"] = scores_dict
+    
+    return {"message": "Баллы успешно обновлены", "scores": scores_dict}
+
+# Получить статистику игры
+@app.get("/api/games/{game_id}/statistics")
+def get_game_statistics(game_id: int):
+    game_state = next((gs for gs in game_states if gs["gameId"] == game_id), None)
+    if not game_state:
+        raise HTTPException(status_code=404, detail="Состояние игры не найдено")
+    
+    players = game_state.get("players", [])
+    scores = game_state.get("scores", {})
+    
+    alive_players = [p for p in players if p.get("isAlive", True) and not p.get("isEliminated", False)]
+    dead_players = game_state.get("deadPlayers", [])
+    eliminated_players = game_state.get("eliminatedPlayers", [])
+    
+    # Подсчет ролей
+    role_stats = {}
+    for player in players:
+        role = player.get("originalRole", "Неизвестно")
+        if role not in role_stats:
+            role_stats[role] = {"total": 0, "alive": 0, "dead": 0, "eliminated": 0}
+        
+        role_stats[role]["total"] += 1
+        
+        if player["id"] in dead_players:
+            role_stats[role]["dead"] += 1
+        elif player["id"] in eliminated_players:
+            role_stats[role]["eliminated"] += 1
+        elif player.get("isAlive", True) and not player.get("isEliminated", False):
+            role_stats[role]["alive"] += 1
+    
+    # Подсчет баллов
+    total_scores = {}
+    for player_id, score in scores.items():
+        total_scores[player_id] = score.get("baseScore", 0) + score.get("additionalScore", 0)
+    
+    return {
+        "gameId": game_id,
+        "round": game_state.get("round", 0),
+        "gameStatus": game_state.get("gameStatus"),
+        "gameSubstatus": game_state.get("gameSubstatus"),
+        "isCriticalRound": game_state.get("isCriticalRound", False),
+        "playersAlive": len(alive_players),
+        "playersDead": len(dead_players),
+        "playersEliminated": len(eliminated_players),
+        "roleStatistics": role_stats,
+        "scores": total_scores
+    }
+
 # Удалить мероприятие
 @app.delete("/api/events/{event_id}")
 def delete_event(event_id: int):
@@ -329,9 +463,7 @@ def delete_event(event_id: int):
     if event_index == -1:
         raise HTTPException(status_code=404, detail="Мероприятие не найдено")
     
-    # Удаляем мероприятие из списка
     deleted_event = events.pop(event_index)
-    
     return {"detail": "Мероприятие успешно удалено", "deleted": deleted_event["id"]}
 
 @app.delete("/api/events/{event_id}/tables/{table_id}")
@@ -345,9 +477,7 @@ def delete_table(event_id: int, table_id: int):
     if table_index == -1:
         raise HTTPException(status_code=404, detail="Стол не найден")
     
-    # Удаляем стол
     deleted_table = tables.pop(table_index)
-    
     return {"detail": "Стол успешно удален", "deleted": deleted_table["id"]}
 
 # Получить список ведущих
@@ -379,8 +509,11 @@ def delete_game(event_id: int, table_id: int, game_id: int):
     if game_index == -1:
         raise HTTPException(status_code=404, detail="Игра не найдена")
     
-    # Удаляем игру
     deleted_game = games.pop(game_index)
+    
+    # Также удаляем состояние игры
+    global game_states
+    game_states = [gs for gs in game_states if gs["gameId"] != game_id]
     
     return {"detail": "Игра успешно удалена", "deleted": deleted_game["id"]}
 
