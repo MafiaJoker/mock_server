@@ -266,24 +266,61 @@ def get_game_state(game_id: int):
 # Обновить состояние игры
 @app.put("/api/games/{game_id}/state")
 def update_game_state(game_id: int, state_data: Dict[str, Any]):
+    print(f"=== ОБНОВЛЕНИЕ СОСТОЯНИЯ ИГРЫ {game_id} ===")
+    print(f"Входящие данные: {state_data}")
+    
     game_state_index = next((i for i, gs in enumerate(game_states) if gs["gameId"] == game_id), -1)
     
     if game_state_index == -1:
         # Если состояние игры не найдено, создаем новое
+        print(f"Создание нового состояния для игры {game_id}")
         new_game_state = {
             "gameId": game_id,
             **state_data
         }
         game_states.append(new_game_state)
-        return new_game_state
-    
-    # Обновляем существующее состояние
-    game_states[game_state_index].update({
-        **state_data,
-        "gameId": game_id
-    })
-    
-    return game_states[game_state_index]
+        game_state = new_game_state
+    else:
+        # Обновляем существующее состояние
+        print(f"Обновление существующего состояния для игры {game_id}")
+        game_states[game_state_index].update({
+            **state_data,
+            "gameId": game_id
+        })
+        game_state = game_states[game_state_index]
+        
+    # ВАЖНО: Синхронизируем статус игры в основной структуре событий
+    if "isGameStarted" in state_data:
+        print(f"Синхронизация статуса игры. isGameStarted: {state_data['isGameStarted']}")
+        
+        # Ищем игру в структуре событий
+        game_found = False
+        for event in events:
+            for table in event.get("tables", []):
+                for game in table.get("games", []):
+                    if game["id"] == game_id:
+                        print(f"Найдена игра в событии {event['id']}, столе {table['id']}")
+                        old_status = game.get("status", "not_started")
+                        
+                        # Обновляем статус игры
+                        if state_data["isGameStarted"]:
+                            game["status"] = "in_progress"
+                            if "round" in state_data:
+                                game["currentRound"] = state_data["round"]
+                                
+                        print(f"Статус игры изменен с '{old_status}' на '{game['status']}'")
+                        game_found = True
+                        break
+                if game_found:
+                    break
+            if game_found:
+                break
+            
+        if not game_found:
+            print(f"ВНИМАНИЕ: Игра с ID {game_id} не найдена в структуре событий!")
+            
+    print(f"Итоговое состояние игры: {game_state}")
+    return game_state
 
 # Удалить мероприятие
 @app.delete("/api/events/{event_id}")
