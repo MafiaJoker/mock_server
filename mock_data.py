@@ -37,6 +37,28 @@ def generate_players(count, revealed=False):
         
     return players
 
+def default_players(count, revealed=False):
+    roles = ["Мирный"] * 10
+    players = []
+    
+    for i in range(1, count + 1):
+        role = roles[i-1]
+        players.append({
+            "id": i,
+            "name": f"Игрок {i}",
+            "role": role,
+            "originalRole": role,
+            "fouls": 0,
+            "nominated": None,
+            "isAlive": True,
+            "isEliminated": False,
+            "isSilent": False,
+            "silentNextRound": False
+        })
+        
+    return players
+
+
 # Список тестовых ведущих
 judges = [
     {"id": 1, "name": "Иван Петров"},
@@ -138,11 +160,30 @@ game_states = [
 ]
 
 # Дефолтное состояние игры (используется для новых игр)
-default_game_state = {
+random_state = {
     "round": 0,
     "phase": "distribution",
     "isGameStarted": False,
     "players": generate_players(10),
+    "nominatedPlayers": [],
+    "votingResults": {},
+    "shootoutPlayers": [],
+    "deadPlayers": [],
+    "eliminatedPlayers": [],
+    "nightKill": None,
+    "bestMoveUsed": False,
+    "noCandidatesRounds": 0,
+    "mafiaTarget": None,
+    "donTarget": None,
+    "sheriffTarget": None,
+    "rolesVisible": False
+}
+
+default_game_state = {
+    "round": 0,
+    "phase": "distribution",
+    "isGameStarted": False,
+    "players": default_players(10),
     "nominatedPlayers": [],
     "votingResults": {},
     "shootoutPlayers": [],
