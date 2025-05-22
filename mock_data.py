@@ -171,6 +171,18 @@ events = [
                         "gameStatus": GAME_STATUSES["FINISHED_WITH_SCORES"],
                         "gameSubstatus": None,
                         "isCriticalRound": False
+                    },
+                    {
+                        "id": 3005,
+                        "name": "Тестовая игра (рассадка готова)",
+                        "created": "2025-05-23T17:00:00",
+                        "status": "not_started",
+                        "currentRound": 0,
+                        "result": None,
+                        # Новые поля - статус SEATING_READY для отладки
+                        "gameStatus": GAME_STATUSES["SEATING_READY"],
+                        "gameSubstatus": None,
+                        "isCriticalRound": False
                     }
                 ]
             },
@@ -238,12 +250,35 @@ events = [
     }
 ]
 
-# Обновленные состояния игр
+# Обновленные состояния игр - убираем поле phase полностью
 game_states = [
+    {
+        "gameId": 3005,  # Тестовая игра в статусе SEATING_READY
+        "round": 0,
+        "isGameStarted": False,
+        # Новые поля - статус SEATING_READY для отладки
+        "gameStatus": GAME_STATUSES["SEATING_READY"],
+        "gameSubstatus": None,
+        "isCriticalRound": False,
+        "scores": {str(i): {"baseScore": 0, "additionalScore": 0} for i in range(1, 11)},
+        
+        "players": default_players(10),
+        "nominatedPlayers": [],
+        "votingResults": {},
+        "shootoutPlayers": [],
+        "deadPlayers": [],
+        "eliminatedPlayers": [],
+        "nightKill": None,
+        "bestMoveUsed": False,
+        "noCandidatesRounds": 0,
+        "mafiaTarget": None,
+        "donTarget": None,
+        "sheriffTarget": None,
+        "rolesVisible": False
+    },
     {
         "gameId": 3002,  # Игра #2 со статусом "in_progress"
         "round": 3,
-        "phase": "day",
         "isGameStarted": True,
         # Новые поля
         "gameStatus": GAME_STATUSES["IN_PROGRESS"],
@@ -268,7 +303,6 @@ game_states = [
     {
         "gameId": 3003,  # Финальная игра со статусом "finished"
         "round": 7,
-        "phase": "end",
         "isGameStarted": False,
         # Новые поля
         "gameStatus": GAME_STATUSES["FINISHED_WITH_SCORES"],
@@ -292,7 +326,6 @@ game_states = [
     {
         "gameId": 3004,  # Игра без баллов
         "round": 5,
-        "phase": "end",
         "isGameStarted": False,
         # Новые поля
         "gameStatus": GAME_STATUSES["FINISHED_NO_SCORES"],
@@ -317,16 +350,15 @@ game_states = [
 ]
 
 # Генерируем баллы для завершенной игры
-finished_game_players = game_states[1]["players"]  # Игра 3003
-game_states[1]["scores"] = generate_player_scores(finished_game_players, "city_win")
+finished_game_players = game_states[2]["players"]  # Игра 3003
+game_states[2]["scores"] = generate_player_scores(finished_game_players, "city_win")
 
-# Дефолтное состояние игры
+# Дефолтное состояние игры - убираем phase полностью
 default_game_state = {
     "round": 0,
-    "phase": "distribution",
     "isGameStarted": False,
-    # Новые поля
-    "gameStatus": GAME_STATUSES["CREATED"],
+    # Новые поля - устанавливаем статус SEATING_READY для отладки
+    "gameStatus": GAME_STATUSES["SEATING_READY"],
     "gameSubstatus": None,
     "isCriticalRound": False,
     "scores": {str(i): {"baseScore": 0, "additionalScore": 0} for i in range(1, 11)},

@@ -61,7 +61,6 @@ class PlayerScore(BaseModel):
 
 class GameStateUpdate(BaseModel):
     round: Optional[int] = None
-    phase: Optional[str] = None
     gameStatus: Optional[GameStatus] = None
     gameSubstatus: Optional[GameSubstatus] = None
     isCriticalRound: Optional[bool] = None
@@ -316,8 +315,8 @@ def update_game_state(game_id: int, state_data: Dict[str, Any]):
         print(f"Создание нового состояния для игры {game_id}")
         new_game_state = {
             "gameId": game_id,
-            # Устанавливаем значения по умолчанию для новых полей
-            "gameStatus": mock_data.GAME_STATUSES["CREATED"],
+            # Устанавливаем значения по умолчанию для новых полей (убираем phase)
+            "gameStatus": mock_data.GAME_STATUSES["SEATING_READY"],
             "gameSubstatus": None,
             "isCriticalRound": False,
             "scores": {str(i): {"baseScore": 0, "additionalScore": 0} for i in range(1, 11)},
@@ -349,13 +348,13 @@ def update_game_state(game_id: int, state_data: Dict[str, Any]):
                             if game_status == mock_data.GAME_STATUSES["IN_PROGRESS"]:
                                 game["status"] = "in_progress"
                             elif game_status in [
-                                mock_data.GAME_STATUSES["FINISHED_NO_SCORES"],
-                                mock_data.GAME_STATUSES["FINISHED_WITH_SCORES"]
+                                    mock_data.GAME_STATUSES["FINISHED_NO_SCORES"],
+                                    mock_data.GAME_STATUSES["FINISHED_WITH_SCORES"]
                             ]:
                                 game["status"] = "finished"
                             else:
                                 game["status"] = "not_started"
-                        
+                                
                         # Обновляем gameStatus и gameSubstatus в игре
                         if "gameStatus" in state_data:
                             game["gameStatus"] = state_data["gameStatus"]
@@ -363,7 +362,7 @@ def update_game_state(game_id: int, state_data: Dict[str, Any]):
                             game["gameSubstatus"] = state_data["gameSubstatus"]
                         if "isCriticalRound" in state_data:
                             game["isCriticalRound"] = state_data["isCriticalRound"]
-                        
+                            
                         if "round" in state_data:
                             game["currentRound"] = state_data["round"]
                             
